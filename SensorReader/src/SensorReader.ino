@@ -2,14 +2,59 @@
 #include "Si1132.h"
 #include "Si70xx.h"
 #include "math.h"
-
-//// ***************************************************************************
-
 //// Initialize application variables
 #define RAD_TO_DEGREES 57.2957795131
 #define DEG_TO_RADIANS 0.0174533
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
+/*Nik*/
+#include "SocketIOClient.h"
+#include "application.h"
+#include "Spark-Websockets.h"
+#include "Particle.h"
+#include "softap_http.h"
+#include <string.h>
+
+WebSocketClient client;
+String routerIP = "";
+int routerPort = 8080;
+
+void onMessage(WebSocketClient client, char* message) {
+  //ed's code goes here
+}
+
+
+void onConnection(const char* url, ResponseCallback* cb, void* cbArg, Reader* body, Writer* result, void* reserved)
+{
+  Serial.begin(9600);
+  char* data = body->fetch_as_string();
+  Serial.println("DATA: " + String(data));
+  const char delimiter[2] = "\t";
+  char* ssid = strtok(data, delimiter);
+  char* pass = strtok(NULL, delimiter);
+  char* ip = strtok(NULL, delimiter);
+  routerIP = String(ip);
+  Serial.println("URL: " + String(url));
+  Serial.println("SSID: " + String(ssid));
+  Serial.println("Pass: " + String(pass));
+  Serial.println("IP: " + String(ip));
+  if(String(url).compareTo(String("/wifi")) == 0  && String(data).compareTo(String("")) != 0)
+  {
+    cb(cbArg, 0, 200, "text/html", nullptr);
+    Serial.println("\nmatch");
+    WiFi.clearCredentials();
+    WiFi.setCredentials(ssid, pass);
+    WiFi.listen(false);
+  }
+  else
+  {
+    cb(cbArg, 0, 404, "text/html", nullptr);
+  }
+}
+STARTUP(softap_set_application_page_handler(onConnection, nullptr));
+
+/*Nik*/
+
 
 char* sensorBits[8]; // Sensor Bits - Active or Inactive depending on received number
 
@@ -131,6 +176,9 @@ void setup()
     // initialises MPU9150 inertial measure unit
     initialiseMPU9150();
 
+    client.onMessage(onMessage);
+    client.connect(routerIP,8080);
+
     // Clears memory
     // clearEEPROM();
 }
@@ -177,8 +225,16 @@ void loop(void)
 {
   int received = 81;
   intToBit(received);
+  //WebSocket stuff
+  client.monitor();
+  delay(50);
+    if(client.connected())
+        Serial.println("Connected!");
+    else
+        Serial.println("Ah fuck!");
 
-  // Save Received to memory 
+
+  // Save Received to memory
   writeToEEPROM(0,received);
   //readFromEEPROM(0);
 
