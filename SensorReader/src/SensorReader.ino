@@ -20,7 +20,8 @@ String routerIP = "";
 int routerPort = 8080;
 
 void onMessage(WebSocketClient client, char* message) {
-  //ed's code goes here
+  //ed's code goes hereby
+  Serial.println("Received:" + String(message));
 }
 
 
@@ -177,7 +178,7 @@ void setup()
     initialiseMPU9150();
 
     client.onMessage(onMessage);
-    client.connect(routerIP,8080);
+    client.connect(routerIP,routerPort);
 
     // Clears memory
     // clearEEPROM();
@@ -232,8 +233,7 @@ void loop(void)
         Serial.println("Connected!");
     else
         Serial.println("Ah fuck!");
-
-
+  Serial.println("Router IP: " + String(routerIP));
   // Save Received to memory
   writeToEEPROM(0,received);
   //readFromEEPROM(0);
