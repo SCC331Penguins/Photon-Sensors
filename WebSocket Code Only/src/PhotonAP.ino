@@ -6,7 +6,7 @@
 
  char* sensorBits[8]; // Sensor Bits - Active or Inactive depending on received number
  WebSocketClient client;
- String routerIP = "192.168.0.15";
+ char* routerIP;
  int routerPort = 80;
  int counter = 0;
 
@@ -38,20 +38,20 @@
 
  void onConnection(const char* url, ResponseCallback* cb, void* cbArg, Reader* body, Writer* result, void* reserved)
  {
-   Serial.begin(9600);
    char* data = body->fetch_as_string();
-   Serial.println("DATA: " + String(data));
-   const char delimiter[2] = "\t";
-   char* ssid = strtok(data, delimiter);
-   char* pass = strtok(NULL, delimiter);
-   char* ip = strtok(NULL, delimiter);
-   routerIP = String(ip);
-   Serial.println("URL: " + String(url));
-   Serial.println("SSID: " + String(ssid));
-   Serial.println("Pass: " + String(pass));
-   Serial.println("IP: " + String(ip));
    if(String(url).compareTo(String("/wifi")) == 0  && String(data).compareTo(String("")) != 0)
    {
+     Serial.begin(9600);
+     Serial.println("DATA: " + String(data));
+     const char delimiter[2] = "\t";
+     char* ssid = strtok(data, delimiter);
+     char* pass = strtok(NULL, delimiter);
+     char* ip = strtok(NULL, delimiter);
+     Serial.println("URL: " + String(url));
+     Serial.println("SSID: " + String(ssid));
+     Serial.println("Pass: " + String(pass));
+     Serial.println("IP: " + String(routerIP));
+     writeIPToEEPROM( ip);
      cb(cbArg, 0, 200, "text/html", nullptr);
      Serial.println("\nmatch");
      WiFi.clearCredentials();
@@ -68,9 +68,11 @@
 // setup() runs once, when the device is first turned on.
 void setup()
 {
+  Serial.println(readIPFromEEPROM());
+  routerIP = readIPFromEEPROM();
   pinMode(D7, OUTPUT);
   Serial.begin(9600);
-  client.connect(routerIP.c_str(),routerPort);
+  client.connect(routerIP);
   client.onMessage(onMessage);
   delay(5000);
 }
@@ -104,4 +106,38 @@ void intToBit (int number){
        Serial.println(String("Bit at position ") + String(i) + String(" ") + String(sensorBits[i]));
      }
    }
+}
+
+// Write to Memory, addr should be 0
+void writeIPToEEPROM( char* IP)
+{
+  int addr = 0;
+  // You can get and put simple values like int, long, bool, etc. using get and put directly
+  for(int i = 0; IP[i] != '\0'; i++)
+  {
+    EEPROM.put(addr, IP[i]);
+    addr += sizeof(char); //keep writing
+  }
+  char end =  '\0';
+    EEPROM.put(addr,  end);
+}
+
+// Read From memory
+char* readIPFromEEPROM()
+{
+  int addr = 0;
+  char ip[16];
+  char ch = 'a';
+  // You can get and put simple values like int, long, bool, etc. using get and put directly
+  while(ch != '\0')
+  {
+    EEPROM.get(addr, ch);
+    ip[addr] = ch;
+    addr += sizeof(char);
+  }
+  ip[addr]= '\0';
+  char *ret = (char*) malloc(16);
+  for(int i = 0; i < addr; ++i)
+        ret[i] =ip[i];
+  return ret;
 }
