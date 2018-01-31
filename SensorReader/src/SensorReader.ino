@@ -11,10 +11,9 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
+char* sensorBits[8]; // Sensor Bits - Active or Inactive depending on received number
 
-int minute = 0; //Current minute
-
-const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
+//const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -35,19 +34,6 @@ byte I2CERR, I2CADR;
 int I2CEN = D2;
 int ALGEN = D3;
 int LED = D7;
-
-/* MOTION DETECTION VARIABLES
-*/
-int inputPin = D6;  // Digital Pin D6 is used to read the output of the PIR
-int msensorState = LOW;        // Start by assuming no motion detected
-int msensorValue = 0;          // Variable for reading the inputPin (D6) status
-///////////////////////////////////////////////////////////////////////////////
-/*SOUND DETECTION VARIABLES
-*/
-int soundState = 0; //initial measurement
-int soundValue = 0; //second measurement to be compared
-bool calibration = true;
-///////////////////////////////////////////////////////////////////////////////
 
 int SOUND = A0;
 double SOUNDV = 0; //// Volts Peak-to-Peak Level/Amplitude
@@ -84,11 +70,21 @@ bool ACCELOK = false;
 int cx, cy, cz, ax, ay, az, gx, gy, gz;
 double tm; //// Celsius
 
-TCPClient client;  //used to connect to the server
-const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
-const int serverPort = 80;  //port
+int west = 0;
+int northWest = 0;
+int southWest = 0;
 
-LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
+int east = 0;
+int northEast = 0;
+int southEast = 0;
+
+double zone1Average = 0;
+double zone2Average = 0;
+double zone3Average = 0;
+
+bool switchLED = false;
+
+int lastZone = 0;
 
 //// ***************************************************************************
 
@@ -103,8 +99,7 @@ void setPinsMode()
 {
     pinMode(I2CEN, OUTPUT);
     pinMode(ALGEN, OUTPUT);
-    pinMode(LED, OUTPUT); //assume no motion, LED off
-    digitalWrite(LED, LOW);
+    pinMode(LED, OUTPUT);
 
     pinMode(SOUND, INPUT);
 
@@ -128,7 +123,7 @@ void setup()
     Wire.begin();  // Start up I2C, required for LSM303 communication
 
     // diables interrupts
-    noInterrupts();                                                            // DO WE NEED INTERRUPTS????
+    noInterrupts();
 
     // initialises the IO pins
     setPinsMode();
@@ -136,26 +131,8 @@ void setup()
     // initialises MPU9150 inertial measure unit
     initialiseMPU9150();
 
-    Serial.begin(9600);
-
-    pinMode(LED, OUTPUT);         // Sets pin connected to photon LED as output
-    pinMode(inputPin, INPUT);     // Sets inputPin as an INPUT
-    digitalWrite(LED, LOW);       // Turns LED OFF, i.e. start by assuming no motion
-
-    minute = Time.minute();  //Returns minute as an int (0-59)
-
-    blinkYellow.setActive(true);
-    connectVM();
-
-}
-//attempt to connect to VMserver, blink red if unable to
-void connectVM(){
-  interrupts();
-  if(client.connect(serverURL, serverPort))
-  {
-    blinkYellow.setActive(false);
-  }
-  noInterrupts();
+    // Clears memory
+    // clearEEPROM();
 }
 
 void initialiseMPU9150()
@@ -196,157 +173,61 @@ void initialiseMPU9150()
     }
 }
 
-
 void loop(void)
 {
-  digitalWrite(I2CEN, HIGH);
-  digitalWrite(ALGEN, HIGH);
-  delay(1000);
+  int received = 81;
+  intToBit(received);
 
-  interrupts();
+  // Save Received to memory 
+  writeToEEPROM(0,received);
+  //readFromEEPROM(0);
 
-  if(client.connected() != true)
-  {
-    blinkYellow.setActive(true);
-    connectVM();
-  }
+  delay(10000);
+}
 
-  //Calibrate sound, measure ambient noise levels
-  if(calibration)
-  {
-    soundState = measure();
-    Serial.println("Calibrated!");
-    calibration = false;
-  }
-
-  msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
-  if (msensorValue == HIGH)              // If the input pin is HIGH turn LED ON
-  {
-    digitalWrite(LED, HIGH);
-
-    if (msensorState == LOW) //Checks if sensor state has changed from its previous state
-     {
-       Serial.println("Motion has been detected!");    // If yes,  prints new state and
-       msensorState = HIGH;                            // preserves current sensor state
-
-       //This is the part that integrates with DoorSensor
-       String timestr = String(Time.now());
-       Serial.println(timestr);
-       Particle.publish("DOORINF", timestr, PUBLIC); //Used for door open checks
-
-       sendServer("Motion");          //tell the server motion was detected
+// Saves to sensorBits each number is a different sensor
+void intToBit (int number){
+  int bitsPosition[8] = { 128, 64, 32, 16, 8, 4, 2, 1 };
+  for (int i = 0; i < 8; i++) {
+    int result = bitsPosition[i] & number;
+     if( result == bitsPosition[i]){
+       sensorBits[i] = "Active";
+       Serial.println(sensorBits[i]);
      }
-  }
-  else
-  {
-    digitalWrite(LED, LOW);                  // Turns LED OFF
-    if (msensorState == HIGH) //Checks if sensor state has changed from its previous state
-    {
-      Serial.println("No motion detected!");      // if yes, prints new state
-      msensorState = LOW;                    // preserves current sensor state
-    }
-  }
-
-
-  //measure sound, check if its more than ambient sound level (within threshold)
-  soundValue = measure();
-  if(soundValue > soundState + 500)
-  {
-    Serial.println("SOUND DETECTED!");
-    sendServer("Sound");                //tell the server sound was detected
-    calibration = true;
-    delay(5000); //delay 5 seconds before next calibration, to make sure we're back to ambient sound levels
-  }
-
-
- readWeatherSi1132();
- readWeatherSi7020();
-
- int newminute = Time.minute();
- if(minute != newminute)
- {
-   while(Si1132Visible == 0 || Si1132Visible > 100)    //keep reading the light sensor untill the result actually makes sense, stop trying after a while
-   {
-     readWeatherSi1132();
-     delay(10);
-     Serial.println(Si1132Visible);
+     else {
+       sensorBits[i] = "Inactive";
+       Serial.println(sensorBits[i]);
+     }
    }
-   sendEnv(Si7020Temperature, Si7020Humidity, Si1132Visible); //send environment readings to server
- }
-
 }
 
-
-//Tell the server when and where motion/sound was detected
-void sendServer(String str)
-{
-  String send = str +" detected in zone " +key +". Device ID: " +System.deviceID() + " in: " + Time.timeStr();
-
-
-  //post string data into the server directly
-
-  client.println("POST /webapp/sendactivity HTTP/1.1");
-  client.println("HOST: sccug-330-03.lancs.ac.uk");
-  client.print("Content-Length: ");
-  client.println(send.length());
-  client.println("Content-Type: text/plain");
-  client.println();
-  client.println(send);
+// Write to Memory, addr should be 0
+void writeToEEPROM(int addr, int intVal){
+  // You can get and put simple values like int, long, bool, etc. using get and put directly
+  EEPROM.put(addr, intVal);
+  //addr += sizeof(int); //keep writing
 }
 
-void sendEnv(float avTemp, float avHumid, float avLight)
-{
-  String send = String(avTemp) + "," +
-     + String(avHumid) + "," +
-      + String(avLight) + "," +
-      + key + "," + Time.year() + "-"  + Time.month() + "-" + Time.day() + "-"
-      + Time.hour() + "-" + Time.minute() + "-" + Time.second() + ","  + Time.now();
-
-  client.println("POST /webapp/sendweather HTTP/1.1");
-  client.println("HOST: sccug-330-03.lancs.ac.uk");
-  client.print("Content-Length: ");
-  client.println(send.length());
-  client.println("Content-Type: text/plain");
-  client.println();
-  //send JSON:
-  Particle.publish("POST weather",send);
-  client.print(send);
-
+// Read From memory
+void readFromEEPROM(int addr){
+  int intVal = 0;
+  // You can get and put simple values like int, long, bool, etc. using get and put directly
+  EEPROM.get(addr, intVal);
+  Serial.printlnf("addr=%d, intVal=%d, sizeof(int)=%d", addr, intVal, sizeof(int));
+  //addr += sizeof(int);
 }
 
-
-/*read sound, return max-min
-*/
-int measure()
-{
-  unsigned int sampleWindow = 50; // Sample window width in milliseconds (50 milliseconds = 20Hz)
-  unsigned long endWindow = millis() + sampleWindow;  // End of sample window
-
-  unsigned int signalSample = 0;
-  unsigned int signalMin = 4095; // Minimum is the lowest signal below which we assume silence
-  unsigned int signalMax = 0; // Maximum signal starts out the same as the Minimum signal
-
-  // collect data for milliseconds equal to sampleWindow
-  while (millis() < endWindow)
-  {
-      signalSample = analogRead(SOUND);
-      if (signalSample > signalMax)
-      {
-          signalMax = signalSample;  // save just the max levels
-      }
-      else if (signalSample < signalMin)
-      {
-          signalMin = signalSample;  // save just the min levels
-      }
-  }
-
-  return signalMax - signalMin;
+// Clear Memory
+void clearEEPROM() {
+	for(int addr = 0; addr < 256; addr++) {
+		EEPROM.write(addr, 0);
+	}
 }
 
 void readMPU9150()
 {
     //// reads the MPU9150 sensor values. Values are read in order of temperature,
-    //// compass, Gyro, Accelerometer
+    //// compass, Gyro,!studio?x57 Accelerometer
 
     tm = ( (double) mpu9150.readSensor(mpu9150._addr_motion, MPU9150_TEMP_OUT_L, MPU9150_TEMP_OUT_H) + 12412.0 ) / 340.0;
     cx = mpu9150.readSensor(mpu9150._addr_motion, MPU9150_CMPS_XOUT_L, MPU9150_CMPS_XOUT_H);  //Compass_X
