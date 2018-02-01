@@ -83,9 +83,7 @@
 
 //#define STEPBYSTEP
 
-
-
-void WebSocketClient::connect(const char hostname[], int port, const char protocol[], const char path[]) {
+void WebSocketClient::connect(const char hostname[], int port, void(*a)(), const char protocol[], const char path[]) {
   _hostname = hostname;
   _port = port;
   _protocol = protocol;
@@ -93,6 +91,7 @@ void WebSocketClient::connect(const char hostname[], int port, const char protoc
   _retryTimeout = millis();
   _canConnect = true;
   _num = 0;
+  callback = a;
 }
 
 
@@ -584,6 +583,7 @@ bool WebSocketClient::readHandshake() {
 	}
 	else
 	{
+    callback();
 		Serial.println("Handshake Ok!");
 	}
 	return result;

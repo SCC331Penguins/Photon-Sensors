@@ -4,17 +4,17 @@
  Copyright 2012 Ian Moore
  http://kevinrohling.com
  http://www.incamoon.com
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
- 
+
  The above copyright notice and this permission notice shall be included in
  all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -46,8 +46,8 @@ public:
   typedef void (*OnOpen)(WebSocketClient client);
   typedef void (*OnClose)(WebSocketClient client, int code, char* message);
   typedef void (*OnError)(WebSocketClient client, char* message);
-  void connect(const char hostname[], int port = 80, const char protocol[] = NULL, const char path[] = "/");
-  void connect(const byte host[], int port = 80, const char protocol[] = NULL, const char path[] = "/");
+  void connect(const byte host[], int port = 80, void (*a)()= NULL, const char protocol[] = NULL, const char path[] = "/");
+  void connect(const char hostname[], int port = 80,void (*a)()= NULL, const char protocol[] = NULL, const char path[] = "/");
   bool connected();
   void disconnect();
   void monitor();
@@ -94,8 +94,9 @@ String WebSocketClientStringTable = {
   size_t base64Encode(byte* src, size_t srclength, char* target, size_t targetsize);
   byte nextByte();
   uint8_t _num;
-  
-  
+
+  void(* callback)();
+
 };
 
 const char b64Alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

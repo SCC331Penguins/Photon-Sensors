@@ -166,7 +166,7 @@ void setup()
 
   intToBit(configNumber);
   pinMode(D7, OUTPUT);
-  client.connect(routerIP);
+  client.connect(routerIP,80,&printStatement);
   client.onMessage(onMessage);
   delay(5000);
 }
@@ -240,8 +240,14 @@ void loop()
     Serial.println("Light Reading:");
     if(Si1132Visible == 0 || Si1132Visible > 100.0)
     Serial.println(Si1132Visible);
+    else Serial.println("Reading too high");
   }
 
+}
+
+void printStatement(){
+  Serial.println("CALLBACK-------");
+  counter=0;
 }
 
 
