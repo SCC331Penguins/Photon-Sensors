@@ -31,6 +31,7 @@
        char* configNumber = strtok(NULL, delimiter);
        Serial.println(String("Number received: ") + String(atoi(configNumber)));
        intToBit(atoi(configNumber));
+       writeConfigToEEPROM(atoi(configNumber));
        break;
      }
   }
@@ -68,10 +69,14 @@
 // setup() runs once, when the device is first turned on.
 void setup()
 {
-  Serial.println(readIPFromEEPROM());
-  routerIP = readIPFromEEPROM();
-  pinMode(D7, OUTPUT);
   Serial.begin(9600);
+  Serial.println(String("IP: ") + String(readIPFromEEPROM()));
+  routerIP = readIPFromEEPROM();
+  int configNumber = readConfigFromEEPROM();
+  Serial.println(String("Config Number:") + String(configNumber));
+
+  intToBit(configNumber);
+  pinMode(D7, OUTPUT);
   client.connect(routerIP);
   client.onMessage(onMessage);
   delay(5000);
@@ -109,7 +114,7 @@ void intToBit (int number){
 }
 
 // Write to Memory, addr should be 0
-void writeIPToEEPROM( char* IP)
+void writeIPToEEPROM(char* IP)
 {
   int addr = 0;
   // You can get and put simple values like int, long, bool, etc. using get and put directly
@@ -119,7 +124,7 @@ void writeIPToEEPROM( char* IP)
     addr += sizeof(char); //keep writing
   }
   char end =  '\0';
-    EEPROM.put(addr,  end);
+  EEPROM.put(addr,  end);
 }
 
 // Read From memory
@@ -140,4 +145,18 @@ char* readIPFromEEPROM()
   for(int i = 0; i < addr; ++i)
         ret[i] =ip[i];
   return ret;
+}
+
+void writeConfigToEEPROM(int configNumber)
+{
+  int addr = 18;
+  EEPROM.put(addr, configNumber);
+}
+
+int readConfigFromEEPROM()
+{
+  int configNumber;
+  int addr = 18;
+  EEPROM.get(addr, configNumber);
+  return configNumber;
 }
