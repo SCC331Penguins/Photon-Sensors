@@ -51,7 +51,7 @@
      Serial.println("URL: " + String(url));
      Serial.println("SSID: " + String(ssid));
      Serial.println("Pass: " + String(pass));
-     Serial.println("IP: " + String(routerIP));
+     Serial.println("IP: " + String(ip));
      writeIPToEEPROM( ip);
      cb(cbArg, 0, 200, "text/html", nullptr);
      Serial.println("\nmatch");
