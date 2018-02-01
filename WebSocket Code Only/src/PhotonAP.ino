@@ -142,9 +142,22 @@ int counter = 0;
  STARTUP(softap_set_application_page_handler(onConnection, nullptr));
 
 // setup() runs once, when the device is first turned on.
-<<<<<<< Updated upstream
 void setup()
 {
+  // opens serial over USB
+  Serial.begin(9600);
+  // Set I2C speed
+  // 400Khz seems to work best with the Photon with the packaged I2C sensors
+  Wire.setSpeed(CLOCK_SPEED_400KHZ);
+  Wire.begin();  // Start up I2C, required for LSM303 communication
+  // diables interrupts
+  noInterrupts();
+  // initialises the IO pins
+  setPinsMode();
+  // initialises MPU9150 inertial measure unit
+  initialiseMPU9150();
+
+  // Websockets
   Serial.begin(9600);
   Serial.println(String("IP: ") + String(readIPFromEEPROM()));
   routerIP = readIPFromEEPROM();
@@ -157,32 +170,6 @@ void setup()
   client.onMessage(onMessage);
   delay(5000);
 }
-=======
-  void setup()
-  {
-    // opens serial over USB
-    Serial.begin(9600);
-    // Set I2C speed
-    // 400Khz seems to work best with the Photon with the packaged I2C sensors
-    Wire.setSpeed(CLOCK_SPEED_400KHZ);
-    Wire.begin();  // Start up I2C, required for LSM303 communication
-    // diables interrupts
-    noInterrupts();
-    // initialises the IO pins
-    setPinsMode();
-    // initialises MPU9150 inertial measure unit
-    initialiseMPU9150();
-
-    // Websockets
-    Serial.println(readIPFromEEPROM());
-    routerIP = readIPFromEEPROM();
-    pinMode(D7, OUTPUT);
-    Serial.begin(9600);
-    client.connect(routerIP);
-    client.onMessage(onMessage);
-    delay(5000);
-  }
->>>>>>> Stashed changes
 
 // loop() runs over and over again, as quickly as it can execute.
 void loop()
@@ -308,7 +295,6 @@ char* readIPFromEEPROM()
   return ret;
 }
 
-<<<<<<< Updated upstream
 void writeConfigToEEPROM(int configNumber)
 {
   int addr = 18;
@@ -322,7 +308,6 @@ int readConfigFromEEPROM()
   EEPROM.get(addr, configNumber);
   return configNumber;
 }
-=======
 
 // --- Set UP ---
 
@@ -515,4 +500,3 @@ void initialiseMPU9150()
       //return 1;
       return SOUNDV;
   }
->>>>>>> Stashed changes
