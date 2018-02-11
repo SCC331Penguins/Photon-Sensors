@@ -16,7 +16,8 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-
+String lineToSend = "";
+int configNumber = 0;
 // Delays
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -76,6 +77,14 @@ float mapFloat(float x, float in_min, float in_max, float out_min, float out_max
 {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
+
+int inputPin = D6;  // Digital Pin D6 is used to read the output of the PIR
+                    // sensor. D6 goes HIGH when motion is detected and LOW when
+                    // there's no motion. When the sensor goes HIGH, it waits for
+                    // short period before it goes LOW
+
+int sensorState = LOW;        // Start by assuming no motion detected
+int sensorValue = 0;          // Variable for reading the inputPin (D6) status
 
 //// ***************************************************************************
 // ---- Websockets ----
@@ -161,7 +170,7 @@ void setup()
   Serial.begin(9600);
   Serial.println(String("IP: ") + String(readIPFromEEPROM()));
   routerIP = readIPFromEEPROM();
-  int configNumber = readConfigFromEEPROM();
+  configNumber = readConfigFromEEPROM();
   Serial.println(String("Config Number:") + String(configNumber));
 
   intToBit(configNumber);
@@ -174,6 +183,12 @@ void setup()
 // loop() runs over and over again, as quickly as it can execute.
 void loop()
 {
+  // reset
+  lineToSend = "{ DID:{";
+  lineToSend += "config: " + String(configNumber) + ",";
+
+  sensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
+
   client.monitor();
   delay(5000);
   if(counter==0)
@@ -193,27 +208,39 @@ void loop()
 
   if(sensorBits[0] == "Active"){
     //TILT
-    Serial.println("Tilt Reading:");
-    String printable = "X:" + String(getXTilt(ax, az)) + " Y:"+ String(getYTilt(ay,az));
+    String printable = "tilt: { X: " + String(getXTilt(ax, az)) + " Y: "+ String(getYTilt(ay,az))+"},";
     Serial.println(printable);
+    lineToSend += printable;
+  }
+  else{
+    lineToSend += "tilt: null,";
   }
 
   if(sensorBits[1] == "Active"){
     //MOTION
-    Serial.println("Motion Reading:");
-    // todo motion readings
+    String reading = motionDetection();
+    Serial.println("Motion:"+reading);
+    lineToSend += "motion: " + reading + ",";
+  }else{
+    lineToSend += "motion: null,";
   }
 
   if(sensorBits[2] == "Active"){
     //IF
     Serial.println("IF Reading:");
     Serial.println(Si1132InfraRd);
+    lineToSend += "if: " + String(Si1132InfraRd) + ",";
+  }else{
+    lineToSend += "if: null,";
   }
 
   if(sensorBits[3] == "Active"){
     //UV
     Serial.println("UV Reading:");
     Serial.println(Si1132UVIndex);
+    lineToSend += "uv: " + String(Si1132UVIndex) + ",";
+  }else{
+    lineToSend += "uv: null,";
   }
 
   if(sensorBits[4] == "Active"){
@@ -221,35 +248,71 @@ void loop()
     Serial.println("Sound Reading:");
     float sound = readSoundLevel();
     Serial.println(sound);
+    lineToSend += "sound: " + String(sound) + ",";
+  }else{
+    lineToSend += "sound: null,";
   }
 
   if(sensorBits[5] == "Active"){
     //HUMIDITY
     Serial.println("Humidity Reading:");
     Serial.println(Si7020Humidity);
+    lineToSend += "humidity: " + String(Si7020Humidity) + ",";
+  }else{
+    lineToSend += "humidity: null,";
   }
 
   if(sensorBits[6] == "Active"){
     //TEMPERATURE
     Serial.println("Temperature Reading:");
     Serial.println(Si7020Temperature);
+    lineToSend += "temperature: " + String(Si7020Temperature) + ",";
+  }else{
+    lineToSend += "temperature: null,";
   }
 
   if(sensorBits[7] == "Active"){
     //LIGHT
     Serial.println("Light Reading:");
-    if(Si1132Visible == 0 || Si1132Visible > 100.0)
-    Serial.println(Si1132Visible);
-    else Serial.println("Reading too high");
+    if(Si1132Visible >= 0 || Si1132Visible <= 100.0){
+      Serial.println(Si1132Visible);
+      lineToSend += "light: " + String(Si1132Visible);
+    }
+    else{
+      Serial.println("Reading too high");
+      lineToSend += "light: too high";
+    }
+  }else{
+    lineToSend += "light: null";
   }
+  lineToSend += "}"
 
+
+  // send lineToSend
+}
+
+String motionDetection(){
+  if (sensorValue == HIGH)              // If the input pin is HIGH turn LED ON
+  {
+    if (sensorState == LOW) //Checks if sensor state has changed from its previous state
+     {
+       return "true";     // If yes,  prints new state and
+       sensorState = HIGH;                    // preserves current sensor state
+    }
+  }
+  else{
+    if (sensorState == HIGH) //Checks if sensor state has changed from its previous state
+    {
+      return "false";     // if yes, prints new state
+      sensorState = LOW;                    // preserves current sensor state
+    }
+  }
 }
 
 void printStatement(){
   Serial.println("CALLBACK-------");
   counter=0;
 }
-
 
 // Saves to sensorBits each number is a different sensor
 void intToBit (int number){
