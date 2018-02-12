@@ -289,6 +289,7 @@ void loop()
 
 
   // send lineToSend
+  client.send(lineToSend);
 }
 
 String motionDetection(){
