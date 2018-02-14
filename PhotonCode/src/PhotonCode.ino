@@ -197,7 +197,7 @@ void loop()
   }
   counter++;
     // reset
-  lineToSend = "{ \"SENSORID\": \""+System.deviceID()+"\",;
+  lineToSend = "{ \"SENSORID\": \""+System.deviceID()+"\"";
   lineToSend += "\"config\": " + String(configNumber) + ",";
   // Sensors
   digitalWrite(I2CEN, HIGH);
@@ -287,9 +287,11 @@ void loop()
   }
   lineToSend += "}"
 
-
+  Serial.print(lineToSend);
   // send lineToSend
-  client.send(lineToSend);
+  char charBuf[lineToSend.length()];
+  lineToSend.toCharArray(charBuf, lineToSend.length());
+  client.send(charBuf);
 }
 
 String motionDetection(){
