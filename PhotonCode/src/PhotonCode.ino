@@ -183,9 +183,7 @@ void setup()
 // loop() runs over and over again, as quickly as it can execute.
 void loop()
 {
-  // reset
-  lineToSend = "{ DID:{";
-  lineToSend += "config: " + String(configNumber) + ",";
+
 
   sensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
 
@@ -198,7 +196,9 @@ void loop()
     client.send(deviceID);
   }
   counter++;
-
+    // reset
+  lineToSend = "{ \"SENSORID\": \""+System.deviceID()+"\",;
+  lineToSend += "\"config\": " + String(configNumber) + ",";
   // Sensors
   digitalWrite(I2CEN, HIGH);
   digitalWrite(ALGEN, HIGH);
@@ -208,39 +208,39 @@ void loop()
 
   if(sensorBits[0] == "Active"){
     //TILT
-    String printable = "tilt: { X: " + String(getXTilt(ax, az)) + " Y: "+ String(getYTilt(ay,az))+"},";
+    String printable = "\"tiltX\": " + String(getXTilt(ax, az)) + ", \"tiltY\": "+ String(getYTilt(ay,az))+",";
     Serial.println(printable);
     lineToSend += printable;
   }
   else{
-    lineToSend += "tilt: null,";
+    lineToSend += "\"tiltX\": null,\"tiltY\": null,";
   }
 
   if(sensorBits[1] == "Active"){
     //MOTION
     String reading = motionDetection();
     Serial.println("Motion:"+reading);
-    lineToSend += "motion: " + reading + ",";
+    lineToSend += "\"motion\": " + reading + ",";
   }else{
-    lineToSend += "motion: null,";
+    lineToSend += "\"motion\": null,";
   }
 
   if(sensorBits[2] == "Active"){
     //IF
     Serial.println("IF Reading:");
     Serial.println(Si1132InfraRd);
-    lineToSend += "if: " + String(Si1132InfraRd) + ",";
+    lineToSend += "\"ir\": " + String(Si1132InfraRd) + ",";
   }else{
-    lineToSend += "if: null,";
+    lineToSend += "\"ir\": null,";
   }
 
   if(sensorBits[3] == "Active"){
     //UV
     Serial.println("UV Reading:");
     Serial.println(Si1132UVIndex);
-    lineToSend += "uv: " + String(Si1132UVIndex) + ",";
+    lineToSend += "\"uv\": " + String(Si1132UVIndex) + ",";
   }else{
-    lineToSend += "uv: null,";
+    lineToSend += "\"uv\": null,";
   }
 
   if(sensorBits[4] == "Active"){
@@ -248,27 +248,27 @@ void loop()
     Serial.println("Sound Reading:");
     float sound = readSoundLevel();
     Serial.println(sound);
-    lineToSend += "sound: " + String(sound) + ",";
+    lineToSend += "\"sound\": " + String(sound) + ",";
   }else{
-    lineToSend += "sound: null,";
+    lineToSend += "\"sound\": null,";
   }
 
   if(sensorBits[5] == "Active"){
     //HUMIDITY
     Serial.println("Humidity Reading:");
     Serial.println(Si7020Humidity);
-    lineToSend += "humidity: " + String(Si7020Humidity) + ",";
+    lineToSend += "\"humidity\": " + String(Si7020Humidity) + ",";
   }else{
-    lineToSend += "humidity: null,";
+    lineToSend += "\"humidity\": null,";
   }
 
   if(sensorBits[6] == "Active"){
     //TEMPERATURE
     Serial.println("Temperature Reading:");
     Serial.println(Si7020Temperature);
-    lineToSend += "temperature: " + String(Si7020Temperature) + ",";
+    lineToSend += "\"temp\": " + String(Si7020Temperature) + ",";
   }else{
-    lineToSend += "temperature: null,";
+    lineToSend += "\"temp\": null,";
   }
 
   if(sensorBits[7] == "Active"){
@@ -276,14 +276,14 @@ void loop()
     Serial.println("Light Reading:");
     if(Si1132Visible >= 0 || Si1132Visible <= 100.0){
       Serial.println(Si1132Visible);
-      lineToSend += "light: " + String(Si1132Visible);
+      lineToSend += "\"light\": " + String(Si1132Visible);
     }
     else{
       Serial.println("Reading too high");
-      lineToSend += "light: too high";
+      lineToSend += "\"light\": null";
     }
   }else{
-    lineToSend += "light: null";
+    lineToSend += "\"light\": null";
   }
   lineToSend += "}"
 
