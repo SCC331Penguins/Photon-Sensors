@@ -183,8 +183,6 @@ void setup()
 // loop() runs over and over again, as quickly as it can execute.
 void loop()
 {
-
-
   sensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
 
   client.monitor();
@@ -285,7 +283,7 @@ void loop()
   }else{
     lineToSend += "\"light\": null";
   }
-  lineToSend += "}"
+  lineToSend += "}";
 
   Serial.print(lineToSend);
   // send lineToSend
