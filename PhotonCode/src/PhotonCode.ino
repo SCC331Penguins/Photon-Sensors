@@ -195,7 +195,7 @@ void loop()
   }
   counter++;
     // reset
-  lineToSend = "{ \"SENSORID\": \""+System.deviceID()+"\"";
+  lineToSend = "{ \"SENSORID\": \""+System.deviceID()+"\",";
   lineToSend += "\"config\": " + String(configNumber) + ",";
   // Sensors
   digitalWrite(I2CEN, HIGH);
@@ -207,6 +207,7 @@ void loop()
   if(sensorBits[0] == "Active"){
     //TILT
     String printable = "\"tiltX\": " + String(getXTilt(ax, az)) + ", \"tiltY\": "+ String(getYTilt(ay,az))+",";
+
     Serial.println(printable);
     lineToSend += printable;
   }
