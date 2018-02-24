@@ -17,7 +17,7 @@
 #define ACCEL_SCALE 2 // +/- 2g
 
 String lineToSend = "";
-int configNumber = 0;
+int configNumber = 10;
 // Delays
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -94,6 +94,13 @@ char* routerIP;
 int routerPort = 80;
 int counter = 0;
 
+
+// ---- Sleep/Delay ----
+bool isSleeping = false;
+const int maxLineNumber = 3600;
+String savedLines[maxLineNumber]; // Estimate for an hour
+int currentLineNumber = 0;
+
  void onMessage(WebSocketClient client, char* message)
  {
    Serial.println("\n---------------\nData Received: " + String(message));
@@ -107,7 +114,7 @@ int counter = 0;
      {
        Serial.println("Found ID match: ");
        Serial.println(var);
-       delimiter[0] =' ';
+       delimiter[0] = ' ';
        strtok(var, delimiter);
        char* configString = strtok(NULL, delimiter);
        delimiter[0] = ':';
@@ -171,11 +178,15 @@ void setup()
   Serial.println(String("IP: ") + String(readIPFromEEPROM()));
   routerIP = readIPFromEEPROM();
   configNumber = readConfigFromEEPROM();
+
+  routerIP = "192.168.0.133";              // EDIT THIS
+  configNumber = 255;                   // EDIT THIS
+
   Serial.println(String("Config Number:") + String(configNumber));
 
   intToBit(configNumber);
   pinMode(D7, OUTPUT);
-  client.connect(routerIP,80,&printStatement);
+  client.connect(routerIP,8000,&printStatement);
   client.onMessage(onMessage);
   delay(5000);
 }
@@ -191,7 +202,7 @@ void loop()
   {
     char deviceID[264];
     strcpy(deviceID, System.deviceID().c_str());
-    client.send(deviceID);
+    //client.send(deviceID);
   }
   counter++;
     // reset
@@ -285,12 +296,33 @@ void loop()
     lineToSend += "\"light\": null";
   }
   lineToSend += "}";
-
-  Serial.print(lineToSend);
   // send lineToSend
-  char charBuf[lineToSend.length()];
-  lineToSend.toCharArray(charBuf, lineToSend.length());
-  client.send(charBuf);
+  if(isSleeping && currentLineNumber < maxLineNumber){ // cant do length
+    savedLines[currentLineNumber] = lineToSend;
+    currentLineNumber++;
+  } else if (currentLineNumber == maxLineNumber){
+    isSleeping = false;
+    currentLineNumber = 0;
+    sendAllLines();
+  }
+  if(!isSleeping){
+    char* charBuf = stringToChar(lineToSend);
+    client.send(charBuf);
+  }
+
+}
+void sendAllLines(){
+  for (int i=0; i < maxLineNumber; i++){
+      char* charBuf = stringToChar(savedLines[i]);
+      client.send(charBuf);
+      delay(10);
+   }
+}
+char* stringToChar(String line){
+  char charBuf[line.length()+1];
+  line.toCharArray(charBuf, line.length()+1);
+  Serial.println(charBuf);
+  return charBuf;
 }
 
 String motionDetection(){
