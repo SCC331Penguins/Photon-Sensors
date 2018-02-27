@@ -97,13 +97,14 @@ int counter = 0;
 
 // ---- Sleep/Delay ----
 bool isSleeping = false;
-const int maxL = 3600;
-int maxLineNumber = 3600; //changed
+const int maxL = 1600;
+int maxLineNumber = 1600; //changed
 String savedLines[maxL]; // Estimate for an hour
 int currentLineNumber = 0;
 
  void onMessage(WebSocketClient client, char* message)
  {
+   Serial.println("Message");
    String msg = String(message);
    if(msg.indexOf(System.deviceID()) > 0){
      if(msg.indexOf("Sleep")> 0){
@@ -224,7 +225,7 @@ void loop()
   sensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
 
   client.monitor();
-  delay(5000);
+  delay(2000);
   if(counter==0)
   {
     char deviceID[264];
@@ -323,7 +324,7 @@ void loop()
     lineToSend += "\"light\": null,";
   }
   time_t time = Time.now();
-  lineToSend += "\"time\": "+time;
+  lineToSend += "\"time\": "+String(time);
   lineToSend += "}";
   // send lineToSend
   if(isSleeping && currentLineNumber < maxLineNumber){ // cant do length
@@ -337,6 +338,7 @@ void loop()
   if(!isSleeping){
     char* charBuf = stringToChar(lineToSend);
     client.send(charBuf);
+    Serial.println("Sent");
   }
 
 }
