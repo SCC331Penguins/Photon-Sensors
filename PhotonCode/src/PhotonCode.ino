@@ -97,37 +97,63 @@ int counter = 0;
 
 // ---- Sleep/Delay ----
 bool isSleeping = false;
-const int maxLineNumber = 3600;
-String savedLines[maxLineNumber]; // Estimate for an hour
+const int maxL = 3600;
+int maxLineNumber = 3600; //changed
+String savedLines[maxL]; // Estimate for an hour
 int currentLineNumber = 0;
 
  void onMessage(WebSocketClient client, char* message)
  {
-   Serial.println("\n---------------\nData Received: " + String(message));
-   Serial.println("Looking for my ID...");
-   char delimiter[2] = ",";
-   char* var;
-   while(true)
-   {
-     char* var = strtok(message, delimiter);
-     if (strstr(var, System.deviceID().c_str()) != NULL)
+   String msg = String(message);
+   if(msg.indexOf(System.deviceID()) > 0){
+     if(msg.indexOf("Sleep")> 0){
+       String sleepString = getValue(msg, ',', 1); //up to 3600
+       String seconds = getValue(sleepString, ':', 1); //up to 3600
+       isSleeping = true;
+       maxLineNumber = seconds.toInt(); // id:21412r21fvBasb,sleep:3600d
+     } else {
+     Serial.println("\n---------------\nData Received: " + msg);
+     Serial.println("Looking for my ID...");
+     char delimiter[2] = ",";
+     char* var;
+     while(true)
      {
-       Serial.println("Found ID match: ");
-       Serial.println(var);
-       delimiter[0] = ' ';
-       strtok(var, delimiter);
-       char* configString = strtok(NULL, delimiter);
-       delimiter[0] = ':';
-       strtok(configString, delimiter);
-       char* configNumber = strtok(NULL, delimiter);
-       Serial.println(String("Number received: ") + String(atoi(configNumber)));
-       intToBit(atoi(configNumber));
-       writeConfigToEEPROM(atoi(configNumber));
-       break;
+       char* var = strtok(message, delimiter);
+       if (strstr(var, System.deviceID().c_str()) != NULL)
+       {
+         Serial.println("Found ID match: ");
+         Serial.println(var);
+         delimiter[0] = ' ';
+         strtok(var, delimiter);
+         char* configString = strtok(NULL, delimiter);
+         delimiter[0] = ':';
+         strtok(configString, delimiter);
+         char* configNumber = strtok(NULL, delimiter);
+         Serial.println(String("Number received: ") + String(atoi(configNumber)));
+         intToBit(atoi(configNumber));
+         writeConfigToEEPROM(atoi(configNumber));
+         break;
+       }
      }
-  }
+   }
+ }
 }
 
+String getValue(String data, char separator, int index)
+{
+    int found = 0;
+    int strIndex[] = { 0, -1 };
+    int maxIndex = data.length() - 1;
+
+    for (int i = 0; i <= maxIndex && found <= index; i++) {
+        if (data.charAt(i) == separator || i == maxIndex) {
+            found++;
+            strIndex[0] = strIndex[1] + 1;
+            strIndex[1] = (i == maxIndex) ? i+1 : i;
+        }
+    }
+    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+}
  void onConnection(const char* url, ResponseCallback* cb, void* cbArg, Reader* body, Writer* result, void* reserved)
  {
    char* data = body->fetch_as_string();
@@ -160,6 +186,7 @@ int currentLineNumber = 0;
 // setup() runs once, when the device is first turned on.
 void setup()
 {
+  Serial.println("started");
   // opens serial over USB
   Serial.begin(9600);
   // Set I2C speed
@@ -286,15 +313,17 @@ void loop()
     Serial.println("Light Reading:");
     if(Si1132Visible >= 0 || Si1132Visible <= 100.0){
       Serial.println(Si1132Visible);
-      lineToSend += "\"light\": " + String(Si1132Visible);
+      lineToSend += "\"light\": " + String(Si1132Visible)+ ",";
     }
     else{
       Serial.println("Reading too high");
-      lineToSend += "\"light\": null";
+      lineToSend += "\"light\": null,";
     }
   }else{
-    lineToSend += "\"light\": null";
+    lineToSend += "\"light\": null,";
   }
+  time_t time = Time.now();
+  lineToSend += "\"time\": "+time;
   lineToSend += "}";
   // send lineToSend
   if(isSleeping && currentLineNumber < maxLineNumber){ // cant do length
