@@ -225,7 +225,7 @@ void loop()
   sensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
 
   client.monitor();
-  delay(2000);
+  //delay(1000);
   if(counter==0)
   {
     char deviceID[264];
@@ -336,7 +336,9 @@ void loop()
     sendAllLines();
   }
   if(!isSleeping){
-    char* charBuf = stringToChar(lineToSend);
+    // send lineToSend
+    char charBuf[lineToSend.length()+1];
+    lineToSend.toCharArray(charBuf, lineToSend.length()+1);
     client.send(charBuf);
     Serial.println("Sent");
   }
@@ -344,8 +346,10 @@ void loop()
 }
 void sendAllLines(){
   for (int i=0; i < maxLineNumber; i++){
-      char* charBuf = stringToChar(savedLines[i]);
+      char charBuf[savedLines[i].length()+1];
+      savedLines[i].toCharArray(charBuf, savedLines[i].length()+1);
       client.send(charBuf);
+      Serial.println("Sent");
       delay(10);
    }
 }
