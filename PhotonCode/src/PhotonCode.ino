@@ -339,6 +339,7 @@ void loop()
     // send lineToSend
     char charBuf[lineToSend.length()+1];
     lineToSend.toCharArray(charBuf, lineToSend.length()+1);
+    Serial.println(charBuf);
     client.send(charBuf);
     Serial.println("Sent");
   }
@@ -360,6 +361,7 @@ char* stringToChar(String line){
   return charBuf;
 }
 
+/// --------------------- ///////////////////////// TODO FIX //////////////////
 String motionDetection(){
   if (sensorValue == HIGH)              // If the input pin is HIGH turn LED ON
   {
@@ -368,6 +370,7 @@ String motionDetection(){
        return "true";     // If yes,  prints new state and
        sensorState = HIGH;                    // preserves current sensor state
     }
+    else return "true";
   }
   else{
     if (sensorState == HIGH) //Checks if sensor state has changed from its previous state
@@ -375,6 +378,7 @@ String motionDetection(){
       return "false";     // if yes, prints new state
       sensorState = LOW;                    // preserves current sensor state
     }
+     else return "false";
   }
 }
 
