@@ -78,14 +78,6 @@ float mapFloat(float x, float in_min, float in_max, float out_min, float out_max
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-int inputPin = D6;  // Digital Pin D6 is used to read the output of the PIR
-                    // sensor. D6 goes HIGH when motion is detected and LOW when
-                    // there's no motion. When the sensor goes HIGH, it waits for
-                    // short period before it goes LOW
-
-int sensorState = LOW;        // Start by assuming no motion detected
-int sensorValue = 0;          // Variable for reading the inputPin (D6) status
-
 //// ***************************************************************************
 // ---- Websockets ----
 char* sensorBits[8]; // Sensor Bits - Active or Inactive depending on received number
@@ -101,6 +93,18 @@ const int maxL = 1600;
 int maxLineNumber = 1600; //changed
 String savedLines[maxL]; // Estimate for an hour
 int currentLineNumber = 0;
+
+// ---- Motion -----
+
+#define LED 7       // The photon LED 7 is used to provide a visual indication
+                    // of detected motion. The LED will turn ON when motion is
+                    // detected and turn OFF when no motion is detected
+int inputPin = D6;  // Digital Pin D6 is used to read the output of the PIR
+                    // sensor. D6 goes HIGH when motion is detected and LOW when
+                    // there's no motion. When the sensor goes HIGH, it waits for
+                    // short period before it goes LOW
+int sensorState = LOW;        // Start by assuming no motion detected
+int sensorValue = 0;          // Variable for reading the inputPin (D6) status
 
  void onMessage(WebSocketClient client, char* message)
  {
@@ -187,6 +191,9 @@ String getValue(String data, char separator, int index)
 // setup() runs once, when the device is first turned on.
 void setup()
 {
+  // Motion
+  pinMode(D7, OUTPUT);
+  pinMode(D6, INPUT);
   Serial.println("started");
   // opens serial over USB
   Serial.begin(9600);
@@ -363,22 +370,27 @@ char* stringToChar(String line){
 
 /// --------------------- ///////////////////////// TODO FIX //////////////////
 String motionDetection(){
+  //motion detection code
+  sensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
+
   if (sensorValue == HIGH)              // If the input pin is HIGH turn LED ON
   {
+    digitalWrite(LED, HIGH);
+
     if (sensorState == LOW) //Checks if sensor state has changed from its previous state
-     {
-       return "true";     // If yes,  prints new state and
-       sensorState = HIGH;                    // preserves current sensor state
+    {
+      Serial.println("Motion has been detected!");    // If yes,  prints new state and
+      sensorState = HIGH;                    // preserves current sensor state
     }
-    else return "true";
   }
-  else{
+  else
+  {
+    digitalWrite(LED, LOW);                  // Turns LED OFF
     if (sensorState == HIGH) //Checks if sensor state has changed from its previous state
     {
-      return "false";     // if yes, prints new state
+      Serial.println("No motion detected!");      // if yes, prints new state
       sensorState = LOW;                    // preserves current sensor state
     }
-     else return "false";
   }
 }
 
