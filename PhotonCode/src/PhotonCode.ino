@@ -209,10 +209,9 @@ void setup()
   initialiseMPU9150();
 
   // Websockets
-  Serial.begin(9600);
-  Serial.println(String("IP: ") + String(readIPFromEEPROM()));
-  routerIP = readIPFromEEPROM();
-  configNumber = readConfigFromEEPROM();
+  //Serial.println(String("IP: ") + String(readIPFromEEPROM()));
+  //routerIP = readIPFromEEPROM();
+  //configNumber = readConfigFromEEPROM();
 
   routerIP = "192.168.0.133";              // EDIT THIS
   configNumber = 255;                   // EDIT THIS
@@ -376,7 +375,6 @@ String motionDetection(){
   if (sensorValue == HIGH)              // If the input pin is HIGH turn LED ON
   {
     digitalWrite(LED, HIGH);
-
     if (sensorState == LOW) //Checks if sensor state has changed from its previous state
     {
       Serial.println("Motion has been detected!");    // If yes,  prints new state and
@@ -394,6 +392,7 @@ String motionDetection(){
       sensorState = LOW;                    // preserves current sensor state
     }
   }
+  return "false";
 }
 
 void printStatement(){
