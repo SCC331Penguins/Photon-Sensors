@@ -371,15 +371,14 @@ char* stringToChar(String line){
 String motionDetection(){
   //motion detection code
   sensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
-
   if (sensorValue == HIGH)              // If the input pin is HIGH turn LED ON
   {
     digitalWrite(LED, HIGH);
     if (sensorState == LOW) //Checks if sensor state has changed from its previous state
     {
       Serial.println("Motion has been detected!");    // If yes,  prints new state and
-      return "true";
       sensorState = HIGH;                    // preserves current sensor state
+      return "true";
     }
   }
   else
@@ -388,8 +387,8 @@ String motionDetection(){
     if (sensorState == HIGH) //Checks if sensor state has changed from its previous state
     {
       Serial.println("No motion detected!");      // if yes, prints new state
-      return "false";
       sensorState = LOW;                    // preserves current sensor state
+      return "false";
     }
   }
   return "false";
